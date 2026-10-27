@@ -36,3 +36,29 @@ def leer_campos(registro):
         jugador.append(trozo.decode("utf-8", errors="replace").strip())
         inicio = inicio + largo
     return jugador
+
+
+def preparar_archivos():
+    try:
+        if not os.path.exists(RUTA_DATOS):
+            with open(RUTA_DATOS, "ab") as archivo:
+                pass
+
+        if not os.path.exists(RUTA_INDICE):
+            with open(RUTA_INDICE, "w", encoding="utf-8") as archivo:
+                json.dump({}, archivo)
+
+    except PermissionError:
+        return "No hay permisos para crear los archivos en esta carpeta."
+    except OSError:
+        return "No se pudieron crear los archivos de datos."
+
+    return ""
+
+
+def contar_registros():
+    return os.path.getsize(RUTA_DATOS) // TAM_REGISTRO
+
+
+def archivo_completo():
+    return os.path.getsize(RUTA_DATOS) % TAM_REGISTRO == 0
