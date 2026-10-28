@@ -15,6 +15,15 @@ def proximamente():
     )
 
 
+def mostrar_estructura():
+    texto = "Campos del registro:\n\n"
+    for i in range(len(archivos.CAMPOS)):
+        texto = texto + archivos.CAMPOS[i] + ": " + str(archivos.LARGOS[i]) + " bytes\n"
+    texto = texto + "salto de linea: 1 byte\n\n"
+    texto = texto + "Tamano total: " + str(archivos.TAM_REGISTRO) + " bytes"
+    messagebox.showinfo("Estructura del registro", texto)
+
+
 def acerca_de():
     messagebox.showinfo(
         "Acerca de",
@@ -22,6 +31,21 @@ def acerca_de():
         "Proyecto de manejo de archivos con acceso aleatorio.\n"
         "Version 1.0"
     )
+
+
+def actualizar_estado():
+    try:
+        cantidad = archivos.contar_registros()
+        lbl_registros.config(text="Registros guardados: " + str(cantidad))
+
+        if archivos.archivo_completo():
+            lbl_aviso.config(text="")
+        else:
+            lbl_aviso.config(text="Aviso: el archivo tiene un registro incompleto.")
+
+    except OSError:
+        lbl_registros.config(text="Registros guardados: no disponible")
+        lbl_aviso.config(text="Aviso: no se pudo leer el archivo de datos.")
 
 
 barra = tk.Menu(ventana)
@@ -48,6 +72,7 @@ menu_herramientas.add_command(label="Informacion del archivo", command=proximame
 barra.add_cascade(label="Herramientas", menu=menu_herramientas)
 
 menu_ayuda = tk.Menu(barra, tearoff=0)
+menu_ayuda.add_command(label="Estructura del registro", command=mostrar_estructura)
 menu_ayuda.add_command(label="Acerca de", command=acerca_de)
 barra.add_cascade(label="Ayuda", menu=menu_ayuda)
 
@@ -68,5 +93,18 @@ lbl_tamano = tk.Label(
     text="Tamano de cada registro: " + str(archivos.TAM_REGISTRO) + " bytes"
 )
 lbl_tamano.pack(pady=5)
+
+lbl_registros = tk.Label(ventana, text="")
+lbl_registros.pack()
+
+lbl_aviso = tk.Label(ventana, text="", fg="red")
+lbl_aviso.pack(pady=10)
+
+error = archivos.preparar_archivos()
+
+if error != "":
+    messagebox.showerror("Error", error)
+
+actualizar_estado()
 
 ventana.mainloop()
