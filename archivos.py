@@ -62,3 +62,70 @@ def contar_registros():
 
 def archivo_completo():
     return os.path.getsize(RUTA_DATOS) % TAM_REGISTRO == 0
+
+
+def cargar_indice():
+    try:
+        with open(RUTA_INDICE, "r", encoding="utf-8") as archivo:
+            indice = json.load(archivo)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if type(indice) != dict:
+        return None
+
+    return indice
+
+
+def guardar_indice(indice):
+    with open(RUTA_INDICE, "w", encoding="utf-8") as archivo:
+        json.dump(indice, archivo, indent=4)
+
+
+def agregar_jugador(datos):
+    jugador = []
+    for i in range(5):
+        texto = str(datos[i]).strip()
+        if texto == "":
+            return "El campo " + CAMPOS[i] + " no puede estar vacio.", -1, -1, -1
+        if "\n" in texto or "\r" in texto:
+            return "El campo " + CAMPOS[i] + " no puede tener saltos de linea.", -1, -1, -1
+        jugador.append(texto)
+
+    if not jugador[0].isdecimal() or int(jugador[0]) == 0:
+        return "El id debe ser un numero entero mayor que cero.", -1, -1, -1
+
+    jugador[0] = str(int(jugador[0]))
+    jugador.append("A")
+
+    error = validar_largos(jugador)
+    if error != "":
+        return error, -1, -1, -1
+
+    indice = cargar_indice()
+    if indice is None:
+        return "No se pudo leer el archivo indice.json.", -1, -1, -1
+
+    if jugador[0] in indice:
+        return "Ya existe un jugador con el id " + jugador[0] + ".", -1, -1, -1
+
+    registro = armar_registro(jugador)
+
+    try:
+        numero = contar_registros()
+
+        with open(RUTA_DATOS, "r+b") as archivo:
+            archivo.seek(numero * TAM_REGISTRO)
+            inicio = archivo.tell()
+            archivo.write(registro)
+            fin = archivo.tell()
+
+        indice[jugador[0]] = numero
+        guardar_indice(indice)
+
+    except PermissionError:
+        return "No hay permisos para escribir en los archivos de datos.", -1, -1, -1
+    except OSError:
+        return "No se pudo guardar el jugador en el archivo.", -1, -1, -1
+
+    return "", numero, inicio, fin
