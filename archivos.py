@@ -178,3 +178,36 @@ def buscar_jugador(id_texto):
         return "El indice no coincide con el archivo de datos.", [], -1, -1, -1
 
     return "", jugador, numero, inicio, fin
+
+
+def modificar_jugador(id_texto, nuevos):
+    error, jugador, numero, inicio, fin = buscar_jugador(id_texto)
+    if error != "":
+        return error, -1, -1
+
+    datos = [jugador[0]]
+    for i in range(4):
+        texto = str(nuevos[i]).strip()
+        if texto == "":
+            return "El campo " + CAMPOS[i + 1] + " no puede estar vacio.", -1, -1
+        if "\n" in texto or "\r" in texto:
+            return "El campo " + CAMPOS[i + 1] + " no puede tener saltos de linea.", -1, -1
+        datos.append(texto)
+    datos.append("A")
+
+    error = validar_largos(datos)
+    if error != "":
+        return error, -1, -1
+
+    try:
+        with open(RUTA_DATOS, "r+b") as archivo:
+            archivo.seek(numero * TAM_REGISTRO)
+            inicio = archivo.tell()
+            archivo.write(armar_registro(datos))
+            fin = archivo.tell()
+    except PermissionError:
+        return "No hay permisos para escribir en el archivo de datos.", -1, -1
+    except OSError:
+        return "No se pudo modificar el jugador en el archivo.", -1, -1
+
+    return "", inicio, fin
