@@ -211,3 +211,46 @@ def modificar_jugador(id_texto, nuevos):
         return "No se pudo modificar el jugador en el archivo.", -1, -1
 
     return "", inicio, fin
+
+
+def eliminar_jugador(id_texto):
+    error, jugador, numero, inicio, fin = buscar_jugador(id_texto)
+    if error != "":
+        return error
+
+    indice = cargar_indice()
+    if indice is None:
+        return "No se pudo leer el archivo indice.json."
+
+    jugador[5] = "E"
+
+    try:
+        with open(RUTA_DATOS, "r+b") as archivo:
+            archivo.seek(numero * TAM_REGISTRO)
+            archivo.write(armar_registro(jugador))
+
+        del indice[jugador[0]]
+        guardar_indice(indice)
+
+    except PermissionError:
+        return "No hay permisos para escribir en los archivos de datos."
+    except OSError:
+        return "No se pudo eliminar el jugador."
+
+    return ""
+
+
+def listar_jugadores():
+    jugadores = []
+
+    try:
+        with open(RUTA_DATOS, "rb") as archivo:
+            for numero in range(contar_registros()):
+                registro = archivo.read(TAM_REGISTRO)
+                jugador = leer_campos(registro)
+                if jugador[5] == "A":
+                    jugadores.append([numero] + jugador)
+    except OSError:
+        return None
+
+    return jugadores
