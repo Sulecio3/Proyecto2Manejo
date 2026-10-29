@@ -129,3 +129,52 @@ def agregar_jugador(datos):
         return "No se pudo guardar el jugador en el archivo.", -1, -1, -1
 
     return "", numero, inicio, fin
+
+
+def convertir_id(texto):
+    texto = str(texto).strip()
+    if not texto.isdecimal() or int(texto) == 0:
+        return ""
+    return str(int(texto))
+
+
+def leer_registro(numero):
+    with open(RUTA_DATOS, "rb") as archivo:
+        archivo.seek(numero * TAM_REGISTRO)
+        inicio = archivo.tell()
+        registro = archivo.read(TAM_REGISTRO)
+        fin = archivo.tell()
+    return registro, inicio, fin
+
+
+def buscar_jugador(id_texto):
+    clave = convertir_id(id_texto)
+    if clave == "":
+        return "El id debe ser un numero entero mayor que cero.", [], -1, -1, -1
+
+    indice = cargar_indice()
+    if indice is None:
+        return "No se pudo leer el archivo indice.json.", [], -1, -1, -1
+
+    if clave not in indice:
+        return "No existe un jugador con el id " + clave + ".", [], -1, -1, -1
+
+    numero = indice[clave]
+    if type(numero) != int or numero < 0:
+        return "El indice tiene un dato invalido para el id " + clave + ".", [], -1, -1, -1
+
+    try:
+        registro, inicio, fin = leer_registro(numero)
+    except PermissionError:
+        return "No hay permisos para leer el archivo de datos.", [], -1, -1, -1
+    except OSError:
+        return "No se pudo leer el archivo de datos.", [], -1, -1, -1
+
+    if len(registro) != TAM_REGISTRO:
+        return "El registro del id " + clave + " esta incompleto.", [], -1, -1, -1
+
+    jugador = leer_campos(registro)
+    if jugador[0] != clave or jugador[5] != "A":
+        return "El indice no coincide con el archivo de datos.", [], -1, -1, -1
+
+    return "", jugador, numero, inicio, fin
