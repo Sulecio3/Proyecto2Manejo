@@ -50,8 +50,67 @@ def actualizar_estado():
 
 barra = tk.Menu(ventana)
 
+
+ventana_agregar = None
+cajas_agregar = []
+lbl_resultado = None
+
+
+def guardar_jugador():
+    datos = []
+    for caja in cajas_agregar:
+        datos.append(caja.get())
+
+    error, numero, inicio, fin = archivos.agregar_jugador(datos)
+
+    if error != "":
+        lbl_resultado.config(text=error, fg="red")
+    else:
+        lbl_resultado.config(
+            text="Jugador guardado en el registro " + str(numero) + ".\n"
+            "Posicion con tell(): " + str(inicio) + " a " + str(fin) + " bytes.",
+            fg="green"
+        )
+        for caja in cajas_agregar:
+            caja.delete(0, tk.END)
+        cajas_agregar[0].focus()
+        actualizar_estado()
+
+
+def abrir_agregar():
+    global ventana_agregar, cajas_agregar, lbl_resultado
+
+    ventana_agregar = tk.Toplevel(ventana)
+    ventana_agregar.title("Agregar jugador")
+    ventana_agregar.geometry("380x330")
+    ventana_agregar.resizable(False, False)
+
+    etiquetas = ["ID:", "Nombre:", "Pais:", "Club:", "Posicion:"]
+    cajas_agregar = []
+
+    for i in range(5):
+        etiqueta = tk.Label(ventana_agregar, text=etiquetas[i])
+        etiqueta.grid(row=i, column=0, padx=15, pady=8, sticky="e")
+        caja = tk.Entry(ventana_agregar, width=30)
+        caja.grid(row=i, column=1, pady=8)
+        cajas_agregar.append(caja)
+
+    boton_guardar = tk.Button(ventana_agregar, text="Guardar", width=12, command=guardar_jugador)
+    boton_guardar.grid(row=5, column=0, pady=15)
+
+    boton_cerrar = tk.Button(ventana_agregar, text="Cerrar", width=12, command=ventana_agregar.destroy)
+    boton_cerrar.grid(row=5, column=1, pady=15)
+
+    lbl_resultado = tk.Label(ventana_agregar, text="", wraplength=340)
+    lbl_resultado.grid(row=6, column=0, columnspan=2, padx=15)
+
+    cajas_agregar[0].focus()
+    ventana_agregar.transient(ventana)
+    ventana_agregar.wait_visibility()
+    ventana_agregar.grab_set()
+
 menu_jugadores = tk.Menu(barra, tearoff=0)
-menu_jugadores.add_command(label="Agregar jugador", command=proximamente)
+menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
 menu_jugadores.add_command(label="Buscar por ID", command=proximamente)
 menu_jugadores.add_command(label="Modificar jugador", command=proximamente)
 menu_jugadores.add_command(label="Eliminar jugador", command=proximamente)
