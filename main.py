@@ -132,11 +132,107 @@ def buscar_por_id():
         )
 
 
+ventana_modificar = None
+caja_id_mod = None
+cajas_mod = []
+lbl_resultado_mod = None
+id_cargado = ""
+
+
+def cargar_para_modificar():
+    global id_cargado
+
+    error, jugador, numero, inicio, fin = archivos.buscar_jugador(caja_id_mod.get())
+
+    for caja in cajas_mod:
+        caja.delete(0, tk.END)
+
+    if error != "":
+        id_cargado = ""
+        lbl_resultado_mod.config(text=error, fg="red")
+    else:
+        id_cargado = jugador[0]
+        for i in range(4):
+            cajas_mod[i].insert(0, jugador[i + 1])
+        lbl_resultado_mod.config(
+            text="Jugador cargado. Cambie los datos y guarde.",
+            fg="black"
+        )
+
+
+def guardar_cambios():
+    if id_cargado == "":
+        lbl_resultado_mod.config(
+            text="Primero cargue un jugador con el boton Cargar datos.",
+            fg="red"
+        )
+        return
+
+    nuevos = []
+    for caja in cajas_mod:
+        nuevos.append(caja.get())
+
+    error, inicio, fin = archivos.modificar_jugador(id_cargado, nuevos)
+
+    if error != "":
+        lbl_resultado_mod.config(text=error, fg="red")
+    else:
+        lbl_resultado_mod.config(
+            text="Jugador modificado en su lugar.\n"
+            "Posicion con tell(): " + str(inicio) + " a " + str(fin) + " bytes.",
+            fg="green"
+        )
+
+
+def abrir_modificar():
+    global ventana_modificar, caja_id_mod, cajas_mod, lbl_resultado_mod, id_cargado
+
+    id_cargado = ""
+
+    ventana_modificar = tk.Toplevel(ventana)
+    ventana_modificar.title("Modificar jugador")
+    ventana_modificar.geometry("420x380")
+    ventana_modificar.resizable(False, False)
+
+    etiqueta_id = tk.Label(ventana_modificar, text="ID:")
+    etiqueta_id.grid(row=0, column=0, padx=15, pady=8, sticky="e")
+
+    caja_id_mod = tk.Entry(ventana_modificar, width=12)
+    caja_id_mod.grid(row=0, column=1, pady=8, sticky="w")
+
+    boton_cargar = tk.Button(ventana_modificar, text="Cargar datos", command=cargar_para_modificar)
+    boton_cargar.grid(row=0, column=2, padx=10)
+
+    etiquetas = ["Nombre:", "Pais:", "Club:", "Posicion:"]
+    cajas_mod = []
+
+    for i in range(4):
+        etiqueta = tk.Label(ventana_modificar, text=etiquetas[i])
+        etiqueta.grid(row=i + 1, column=0, padx=15, pady=8, sticky="e")
+        caja = tk.Entry(ventana_modificar, width=30)
+        caja.grid(row=i + 1, column=1, columnspan=2, pady=8, sticky="w")
+        cajas_mod.append(caja)
+
+    boton_guardar = tk.Button(ventana_modificar, text="Guardar cambios", width=14, command=guardar_cambios)
+    boton_guardar.grid(row=5, column=1, pady=15)
+
+    boton_cerrar = tk.Button(ventana_modificar, text="Cerrar", width=10, command=ventana_modificar.destroy)
+    boton_cerrar.grid(row=5, column=2, pady=15)
+
+    lbl_resultado_mod = tk.Label(ventana_modificar, text="", wraplength=380)
+    lbl_resultado_mod.grid(row=6, column=0, columnspan=3, padx=15)
+
+    caja_id_mod.focus()
+    ventana_modificar.transient(ventana)
+    ventana_modificar.wait_visibility()
+    ventana_modificar.grab_set()
+
+
 barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
 menu_jugadores.add_command(label="Buscar por ID", command=buscar_por_id)
-menu_jugadores.add_command(label="Modificar jugador", command=proximamente)
+menu_jugadores.add_command(label="Modificar jugador", command=abrir_modificar)
 menu_jugadores.add_command(label="Eliminar jugador", command=proximamente)
 menu_jugadores.add_command(label="Ver todos", command=proximamente)
 menu_jugadores.add_separator()
