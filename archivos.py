@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 
 RUTA_DATOS = "jugadores.dat"
 RUTA_INDICE = "indice.json"
@@ -95,8 +96,10 @@ def agregar_jugador(datos):
     if not jugador[0].isdecimal() or int(jugador[0]) == 0:
         return "El id debe ser un numero entero mayor que cero.", -1, -1, -1
 
-    jugador[0] = str(int(jugador[0]))
-    jugador.append("A")
+    indice[jugador[0]] = numero
+    guardar_indice(indice)
+    guardar_hash()
+    
 
     error = validar_largos(jugador)
     if error != "":
@@ -205,6 +208,7 @@ def modificar_jugador(id_texto, nuevos):
             inicio = archivo.tell()
             archivo.write(armar_registro(datos))
             fin = archivo.tell()
+        guardar_hash()
     except PermissionError:
         return "No hay permisos para escribir en el archivo de datos.", -1, -1
     except OSError:
@@ -231,6 +235,7 @@ def eliminar_jugador(id_texto):
 
         del indice[jugador[0]]
         guardar_indice(indice)
+        guardar_hash()
 
     except PermissionError:
         return "No hay permisos para escribir en los archivos de datos."
@@ -254,3 +259,40 @@ def listar_jugadores():
         return None
 
     return jugadores
+
+
+def calcular_hash(ruta):
+    sha256 = hashlib.sha256()
+
+    with open(ruta, "rb") as archivo:
+        while True:
+            bloque = archivo.read(4096)
+
+            if not bloque:
+                break
+
+            sha256.update(bloque)
+
+    return sha256.hexdigest()
+
+
+def guardar_hash():
+    with open(RUTA_HASH, "w", encoding="utf-8") as archivo:
+        archivo.write(calcular_hash(RUTA_DATOS))
+
+
+def verificar_hash():
+    if not os.path.exists(RUTA_HASH):
+        return "sin_hash", "", ""
+
+    try:
+        with open(RUTA_HASH, "r", encoding="utf-8") as archivo:
+            guardado = archivo.read().strip()
+        actual = calcular_hash(RUTA_DATOS)
+    except OSError:
+        return "error", "", ""
+
+    if guardado == actual:
+        return "ok", guardado, actual
+
+    return "alterado", guardado, actual
