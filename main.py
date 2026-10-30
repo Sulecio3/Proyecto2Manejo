@@ -94,7 +94,12 @@ def abrir_agregar():
 def actualizar_estado():
     try:
         cantidad = archivos.contar_registros()
-        lbl_registros.config(text="Registros guardados: " + str(cantidad))
+        indice = archivos.cargar_indice()
+
+        texto = "Registros en el archivo: " + str(cantidad)
+        if indice is not None:
+            texto = texto + " (activos: " + str(len(indice)) + ")"
+        lbl_registros.config(text=texto)
 
         if archivos.archivo_completo():
             lbl_aviso.config(text="")
@@ -102,7 +107,7 @@ def actualizar_estado():
             lbl_aviso.config(text="Aviso: el archivo tiene un registro incompleto.")
 
     except OSError:
-        lbl_registros.config(text="Registros guardados: no disponible")
+        lbl_registros.config(text="Registros en el archivo: no disponible")
         lbl_aviso.config(text="Aviso: no se pudo leer el archivo de datos.")
 
 def buscar_por_id():
@@ -228,13 +233,76 @@ def abrir_modificar():
     ventana_modificar.grab_set()
 
 
+def eliminar_por_id():
+    texto = simpledialog.askstring(
+        "Eliminar jugador",
+        "Ingrese el id del jugador:",
+        parent=ventana
+    )
+
+    if texto is None:
+        return
+
+    error, jugador, numero, inicio, fin = archivos.buscar_jugador(texto)
+
+    if error != "":
+        messagebox.showerror("Error", error)
+        return
+
+    respuesta = messagebox.askyesno(
+        "Confirmar",
+        "Desea eliminar a " + jugador[1] + " (id " + jugador[0] + ")?"
+    )
+
+    if respuesta:
+        error = archivos.eliminar_jugador(jugador[0])
+
+        if error != "":
+            messagebox.showerror("Error", error)
+        else:
+            messagebox.showinfo("Eliminado", "El jugador fue eliminado.")
+            actualizar_estado()
+
+
+def ver_todos():
+    jugadores = archivos.listar_jugadores()
+
+    if jugadores is None:
+        messagebox.showerror("Error", "No se pudo leer el archivo de datos.")
+        return
+
+    if len(jugadores) == 0:
+        messagebox.showinfo("Jugadores", "Todavia no hay jugadores registrados.")
+        return
+
+    ventana_lista = tk.Toplevel(ventana)
+    ventana_lista.title("Jugadores registrados")
+    ventana_lista.geometry("800x380")
+
+    lista = tk.Listbox(ventana_lista, font=("Courier New", 10), width=95, height=16)
+    desplazamiento = tk.Scrollbar(ventana_lista, command=lista.yview)
+    lista.config(yscrollcommand=desplazamiento.set)
+    desplazamiento.pack(side="right", fill="y")
+    lista.pack(side="left", fill="both", expand=True)
+
+    titulo = f"{'Reg':<4}{'ID':<7}{'Nombre':<28}{'Pais':<15}{'Club':<26}{'Posicion':<15}"
+    lista.insert(tk.END, titulo)
+
+    for jugador in jugadores:
+        linea = (
+            f"{jugador[0]:<4}{jugador[1]:<7}{jugador[2]:<28}"
+            f"{jugador[3]:<15}{jugador[4]:<26}{jugador[5]:<15}"
+        )
+        lista.insert(tk.END, linea)    
+
+
 barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
 menu_jugadores.add_command(label="Buscar por ID", command=buscar_por_id)
 menu_jugadores.add_command(label="Modificar jugador", command=abrir_modificar)
-menu_jugadores.add_command(label="Eliminar jugador", command=proximamente)
-menu_jugadores.add_command(label="Ver todos", command=proximamente)
+menu_jugadores.add_command(label="Eliminar jugador", command=eliminar_por_id)
+menu_jugadores.add_command(label="Ver todos", command=ver_todos)
 menu_jugadores.add_separator()
 menu_jugadores.add_command(label="Salir", command=ventana.destroy)
 barra.add_cascade(label="Jugadores", menu=menu_jugadores)
