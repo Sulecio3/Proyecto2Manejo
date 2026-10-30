@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import archivos
 
 ventana = tk.Tk()
@@ -31,25 +31,6 @@ def acerca_de():
         "Proyecto de manejo de archivos con acceso aleatorio.\n"
         "Version 1.0"
     )
-
-
-def actualizar_estado():
-    try:
-        cantidad = archivos.contar_registros()
-        lbl_registros.config(text="Registros guardados: " + str(cantidad))
-
-        if archivos.archivo_completo():
-            lbl_aviso.config(text="")
-        else:
-            lbl_aviso.config(text="Aviso: el archivo tiene un registro incompleto.")
-
-    except OSError:
-        lbl_registros.config(text="Registros guardados: no disponible")
-        lbl_aviso.config(text="Aviso: no se pudo leer el archivo de datos.")
-
-
-barra = tk.Menu(ventana)
-
 
 ventana_agregar = None
 cajas_agregar = []
@@ -107,11 +88,54 @@ def abrir_agregar():
     cajas_agregar[0].focus()
     ventana_agregar.transient(ventana)
     ventana_agregar.wait_visibility()
-    ventana_agregar.grab_set()
+    ventana_agregar.grab_set()    
 
+
+def actualizar_estado():
+    try:
+        cantidad = archivos.contar_registros()
+        lbl_registros.config(text="Registros guardados: " + str(cantidad))
+
+        if archivos.archivo_completo():
+            lbl_aviso.config(text="")
+        else:
+            lbl_aviso.config(text="Aviso: el archivo tiene un registro incompleto.")
+
+    except OSError:
+        lbl_registros.config(text="Registros guardados: no disponible")
+        lbl_aviso.config(text="Aviso: no se pudo leer el archivo de datos.")
+
+def buscar_por_id():
+    texto = simpledialog.askstring(
+        "Buscar por ID",
+        "Ingrese el id del jugador:",
+        parent=ventana
+    )
+
+    if texto is None:
+        return
+
+    error, jugador, numero, inicio, fin = archivos.buscar_jugador(texto)
+
+    if error != "":
+        messagebox.showerror("Error", error)
+    else:
+        messagebox.showinfo(
+            "Jugador encontrado",
+            "ID: " + jugador[0] + "\n"
+            "Nombre: " + jugador[1] + "\n"
+            "Pais: " + jugador[2] + "\n"
+            "Club: " + jugador[3] + "\n"
+            "Posicion: " + jugador[4] + "\n\n"
+            "Registro numero: " + str(numero) + "\n"
+            "Posicion con seek() y tell(): " + str(inicio) + " a " + str(fin)
+        )
+
+
+barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
-menu_jugadores.add_command(label="Buscar por ID", command=proximamente)
+menu_jugadores.add_command(label="Buscar por ID", command=buscar_por_id)
 menu_jugadores.add_command(label="Modificar jugador", command=proximamente)
 menu_jugadores.add_command(label="Eliminar jugador", command=proximamente)
 menu_jugadores.add_command(label="Ver todos", command=proximamente)
