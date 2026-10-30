@@ -296,6 +296,66 @@ def ver_todos():
         lista.insert(tk.END, linea)    
 
 
+def revisar_hash_inicial():
+    estado, guardado, actual = archivos.verificar_hash()
+
+    if estado == "sin_hash":
+        try:
+            archivos.guardar_hash()
+        except OSError:
+            messagebox.showerror("Error", "No se pudo crear el archivo jugadores.sha256.")
+
+    elif estado == "alterado":
+        messagebox.showwarning(
+            "Archivo alterado",
+            "El archivo jugadores.dat fue modificado fuera de la aplicacion.\n"
+            "Use Herramientas > Verificar integridad para revisarlo."
+        )
+
+    elif estado == "error":
+        messagebox.showerror("Error", "No se pudo verificar la integridad del archivo.")
+
+
+def verificar_integridad():
+    estado, guardado, actual = archivos.verificar_hash()
+
+    if estado == "ok":
+        messagebox.showinfo(
+            "Integridad",
+            "El archivo esta integro.\n\n"
+            "SHA-256 actual:\n" + actual
+        )
+
+    elif estado == "sin_hash":
+        try:
+            archivos.guardar_hash()
+            messagebox.showinfo(
+                "Integridad",
+                "No habia un hash guardado. Se creo con el contenido actual del archivo."
+            )
+        except OSError:
+            messagebox.showerror("Error", "No se pudo crear el archivo jugadores.sha256.")
+
+    elif estado == "alterado":
+        respuesta = messagebox.askyesno(
+            "Archivo alterado",
+            "El archivo jugadores.dat fue modificado fuera de la aplicacion.\n\n"
+            "SHA-256 guardado:\n" + guardado + "\n\n"
+            "SHA-256 actual:\n" + actual + "\n\n"
+            "Desea aceptar el archivo actual y actualizar el hash?"
+        )
+
+        if respuesta:
+            try:
+                archivos.guardar_hash()
+                messagebox.showinfo("Integridad", "El hash fue actualizado.")
+            except OSError:
+                messagebox.showerror("Error", "No se pudo actualizar el hash.")
+
+    else:
+        messagebox.showerror("Error", "No se pudo verificar la integridad del archivo.")        
+
+
 barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
@@ -313,7 +373,7 @@ menu_exportar.add_command(label="Generar reporte PDF", command=proximamente)
 barra.add_cascade(label="Exportar", menu=menu_exportar)
 
 menu_herramientas = tk.Menu(barra, tearoff=0)
-menu_herramientas.add_command(label="Verificar integridad", command=proximamente)
+menu_herramientas.add_command(label="Verificar integridad", command=verificar_integridad)
 menu_herramientas.add_command(label="Crear respaldo ZIP", command=proximamente)
 menu_herramientas.add_command(label="Informacion del archivo", command=proximamente)
 barra.add_cascade(label="Herramientas", menu=menu_herramientas)
@@ -351,6 +411,8 @@ error = archivos.preparar_archivos()
 
 if error != "":
     messagebox.showerror("Error", error)
+else:
+    revisar_hash_inicial()
 
 actualizar_estado()
 
