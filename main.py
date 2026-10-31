@@ -381,6 +381,51 @@ def generar_reporte_pdf():
         )
 
 
+def hacer_respaldo():
+    error, ruta_zip, original, comprimido = archivos.crear_respaldo()
+
+    if error != "":
+        messagebox.showerror("Error", error)
+        return
+
+    if original == 0:
+        reduccion = 0
+    else:
+        reduccion = ((original - comprimido) / original) * 100
+
+    texto = "Respaldo creado en:\n" + ruta_zip + "\n\n"
+    texto = texto + "Tamano original: " + str(original) + " bytes\n"
+    texto = texto + "Tamano del ZIP: " + str(comprimido) + " bytes\n"
+    texto = texto + f"Reduccion: {reduccion:.2f}%"
+    messagebox.showinfo("Respaldo ZIP", texto)
+
+
+def mostrar_informacion():
+    error, tamano, modificado, puede_leer, puede_escribir = archivos.informacion_archivo()
+
+    if error != "":
+        messagebox.showerror("Error", error)
+        return
+
+    if puede_leer:
+        permiso_lectura = "Si"
+    else:
+        permiso_lectura = "No"
+
+    if puede_escribir:
+        permiso_escritura = "Si"
+    else:
+        permiso_escritura = "No"
+
+    texto = "Archivo: " + archivos.RUTA_DATOS + "\n"
+    texto = texto + "Tamano: " + str(tamano) + " bytes\n"
+    texto = texto + "Registros completos: " + str(tamano // archivos.TAM_REGISTRO) + "\n"
+    texto = texto + "Ultima modificacion: " + modificado + "\n"
+    texto = texto + "Permiso de lectura: " + permiso_lectura + "\n"
+    texto = texto + "Permiso de escritura: " + permiso_escritura
+    messagebox.showinfo("Informacion del archivo", texto)
+
+
 barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
@@ -399,8 +444,8 @@ barra.add_cascade(label="Exportar", menu=menu_exportar)
 
 menu_herramientas = tk.Menu(barra, tearoff=0)
 menu_herramientas.add_command(label="Verificar integridad", command=verificar_integridad)
-menu_herramientas.add_command(label="Crear respaldo ZIP", command=proximamente)
-menu_herramientas.add_command(label="Informacion del archivo", command=proximamente)
+menu_herramientas.add_command(label="Crear respaldo ZIP", command=hacer_respaldo)
+menu_herramientas.add_command(label="Informacion del archivo", command=mostrar_informacion)
 barra.add_cascade(label="Herramientas", menu=menu_herramientas)
 
 menu_ayuda = tk.Menu(barra, tearoff=0)
