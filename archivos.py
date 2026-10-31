@@ -1,10 +1,13 @@
 import os
 import json
 import hashlib
+import zipfile
+from datetime import datetime
 
 RUTA_DATOS = "jugadores.dat"
 RUTA_INDICE = "indice.json"
 RUTA_HASH = "jugadores.sha256"
+CARPETA_RESPALDOS = "respaldos"
 
 CAMPOS = ["id", "nombre", "pais", "club", "posicion", "estado"]
 LARGOS = [6, 30, 15, 25, 15, 1]
@@ -296,3 +299,45 @@ def verificar_hash():
         return "ok", guardado, actual
 
     return "alterado", guardado, actual
+
+
+def crear_respaldo():
+    archivos_respaldo = [RUTA_DATOS, RUTA_INDICE]
+
+    for ruta in archivos_respaldo:
+        if not os.path.exists(ruta):
+            return "No se encontro el archivo " + ruta + ". No se pudo crear el respaldo.", "", 0, 0
+
+    try:
+        os.makedirs(CARPETA_RESPALDOS, exist_ok=True)
+        fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ruta_zip = os.path.join(CARPETA_RESPALDOS, "respaldo_" + fecha + ".zip")
+
+        original = 0
+
+        with zipfile.ZipFile(ruta_zip, "w", compression=zipfile.ZIP_DEFLATED) as zip_archivo:
+            for ruta in archivos_respaldo:
+                zip_archivo.write(ruta, ruta)
+                original = original + os.path.getsize(ruta)
+
+        comprimido = os.path.getsize(ruta_zip)
+
+    except PermissionError:
+        return "No hay permisos para crear el respaldo.", "", 0, 0
+    except OSError:
+        return "No se pudo crear el respaldo ZIP.", "", 0, 0
+
+    return "", ruta_zip, original, comprimido
+
+
+def informacion_archivo():
+    try:
+        datos = os.stat(RUTA_DATOS)
+    except OSError:
+        return "No se pudo consultar el archivo " + RUTA_DATOS + ".", 0, "", False, False
+
+    modificado = datetime.fromtimestamp(datos.st_mtime).strftime("%d/%m/%Y %H:%M:%S")
+    puede_leer = os.access(RUTA_DATOS, os.R_OK)
+    puede_escribir = os.access(RUTA_DATOS, os.W_OK)
+
+    return "", datos.st_size, modificado, puede_leer, puede_escribir
