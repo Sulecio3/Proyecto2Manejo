@@ -8,14 +8,6 @@ ventana.title("Registro de Jugadores de Futbol")
 ventana.geometry("480x300")
 ventana.resizable(False, False)
 
-
-def proximamente():
-    messagebox.showinfo(
-        "En desarrollo",
-        "Esta opcion todavia no esta disponible."
-    )
-
-
 def mostrar_estructura():
     texto = "Campos del registro:\n\n"
     for i in range(len(archivos.CAMPOS)):
@@ -426,6 +418,33 @@ def mostrar_informacion():
     messagebox.showinfo("Informacion del archivo", texto)
 
 
+def revisar_indice_inicial():
+    if archivos.indice_correcto():
+        return
+
+    respuesta = messagebox.askyesno(
+        "Indice",
+        "El archivo indice.json no existe, esta danado o no coincide con jugadores.dat.\n\n"
+        "Desea reconstruirlo ahora?"
+    )
+
+    if respuesta:
+        reconstruir_indice()
+
+
+def reconstruir_indice():
+    error, total = archivos.reconstruir_indice()
+
+    if error != "":
+        messagebox.showerror("Error", error)
+    else:
+        messagebox.showinfo(
+            "Indice reconstruido",
+            "Se indexaron " + str(total) + " jugadores activos."
+        )
+        actualizar_estado()
+
+
 barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
@@ -446,6 +465,7 @@ menu_herramientas = tk.Menu(barra, tearoff=0)
 menu_herramientas.add_command(label="Verificar integridad", command=verificar_integridad)
 menu_herramientas.add_command(label="Crear respaldo ZIP", command=hacer_respaldo)
 menu_herramientas.add_command(label="Informacion del archivo", command=mostrar_informacion)
+menu_herramientas.add_command(label="Reconstruir indice", command=reconstruir_indice)
 barra.add_cascade(label="Herramientas", menu=menu_herramientas)
 
 menu_ayuda = tk.Menu(barra, tearoff=0)
@@ -482,6 +502,7 @@ error = archivos.preparar_archivos()
 if error != "":
     messagebox.showerror("Error", error)
 else:
+    revisar_indice_inicial()
     revisar_hash_inicial()
 
 actualizar_estado()
