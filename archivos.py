@@ -72,7 +72,7 @@ def cargar_indice():
     try:
         with open(RUTA_INDICE, "r", encoding="utf-8") as archivo:
             indice = json.load(archivo)
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError):
         return None
 
     if type(indice) != dict:
@@ -292,7 +292,7 @@ def verificar_hash():
         with open(RUTA_HASH, "r", encoding="utf-8") as archivo:
             guardado = archivo.read().strip()
         actual = calcular_hash(RUTA_DATOS)
-    except OSError:
+    except (OSError, ValueError):
         return "error", "", ""
 
     if guardado == actual:
@@ -341,3 +341,40 @@ def informacion_archivo():
     puede_escribir = os.access(RUTA_DATOS, os.W_OK)
 
     return "", datos.st_size, modificado, puede_leer, puede_escribir
+
+
+def construir_indice():
+    indice = {}
+
+    with open(RUTA_DATOS, "rb") as archivo:
+        for numero in range(contar_registros()):
+            registro = archivo.read(TAM_REGISTRO)
+            jugador = leer_campos(registro)
+            if jugador[5] == "A" and jugador[0].isdecimal():
+                indice[jugador[0]] = numero
+
+    return indice
+
+
+def reconstruir_indice():
+    try:
+        indice = construir_indice()
+        guardar_indice(indice)
+    except PermissionError:
+        return "No hay permisos para escribir el archivo indice.json.", 0
+    except OSError:
+        return "No se pudo reconstruir el indice.", 0
+
+    return "", len(indice)
+
+
+def indice_correcto():
+    indice = cargar_indice()
+
+    if indice is None:
+        return False
+
+    try:
+        return indice == construir_indice()
+    except OSError:
+        return False
