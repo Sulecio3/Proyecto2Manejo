@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import archivos
+import exportar
 
 ventana = tk.Tk()
 ventana.title("Registro de Jugadores de Futbol")
@@ -356,6 +357,30 @@ def verificar_integridad():
         messagebox.showerror("Error", "No se pudo verificar la integridad del archivo.")        
 
 
+def exportar_a_json():
+    error, total = exportar.exportar_json()
+
+    if error != "":
+        messagebox.showerror("Error", error)
+    else:
+        messagebox.showinfo(
+            "Exportacion",
+            "Se exportaron " + str(total) + " jugadores a:\n" + exportar.RUTA_JSON
+        )
+
+
+def generar_reporte_pdf():
+    error, total = exportar.generar_pdf()
+
+    if error != "":
+        messagebox.showerror("Error", error)
+    else:
+        messagebox.showinfo(
+            "Reporte PDF",
+            "Se genero el reporte con " + str(total) + " jugadores en:\n" + exportar.RUTA_PDF
+        )
+
+
 barra = tk.Menu(ventana)
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
@@ -368,8 +393,8 @@ menu_jugadores.add_command(label="Salir", command=ventana.destroy)
 barra.add_cascade(label="Jugadores", menu=menu_jugadores)
 
 menu_exportar = tk.Menu(barra, tearoff=0)
-menu_exportar.add_command(label="Exportar a JSON", command=proximamente)
-menu_exportar.add_command(label="Generar reporte PDF", command=proximamente)
+menu_exportar.add_command(label="Exportar a JSON", command=exportar_a_json)
+menu_exportar.add_command(label="Generar reporte PDF", command=generar_reporte_pdf)
 barra.add_cascade(label="Exportar", menu=menu_exportar)
 
 menu_herramientas = tk.Menu(barra, tearoff=0)
