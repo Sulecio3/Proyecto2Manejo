@@ -2,6 +2,7 @@ import os
 import json
 from datetime import datetime
 from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4, landscape
 import archivos
 
 CARPETA = "exportaciones"
@@ -26,9 +27,11 @@ def exportar_json():
             "registro": jugador[0],
             "id": identificador,
             "nombre": jugador[2],
-            "pais": jugador[3],
-            "club": jugador[4],
-            "posicion": jugador[5]
+            "telefono": jugador[3],
+            "correo": jugador[4],
+            "ciudad": jugador[5],
+            "club": jugador[6],
+            "posicion": jugador[7]
         })
 
     datos = {
@@ -59,35 +62,39 @@ def generar_pdf():
         with open(RUTA_JSON, "r", encoding="utf-8") as archivo:
             datos = json.load(archivo)
 
-        pdf = canvas.Canvas(RUTA_PDF)
+        pdf = canvas.Canvas(RUTA_PDF, pagesize=landscape(A4))
         pdf.setFont("Helvetica-Bold", 14)
-        pdf.drawString(50, 780, "REPORTE DE JUGADORES DE FUTBOL")
+        pdf.drawString(40, 550, "REPORTE DE JUGADORES DE FUTBOL")
 
         pdf.setFont("Helvetica", 10)
-        pdf.drawString(50, 758, "Fecha de generacion: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-        pdf.drawString(50, 744, "Total de jugadores: " + str(datos["total"]))
+        pdf.drawString(40, 528, "Fecha de generacion: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        pdf.drawString(40, 514, "Total de jugadores: " + str(datos["total"]))
 
-        pdf.setFont("Helvetica-Bold", 10)
-        pdf.drawString(50, 712, "ID")
-        pdf.drawString(95, 712, "Nombre")
-        pdf.drawString(250, 712, "Pais")
-        pdf.drawString(340, 712, "Club")
-        pdf.drawString(470, 712, "Posicion")
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(40, 482, "ID")
+        pdf.drawString(80, 482, "Nombre")
+        pdf.drawString(230, 482, "Telefono")
+        pdf.drawString(320, 482, "Correo")
+        pdf.drawString(490, 482, "Ciudad")
+        pdf.drawString(590, 482, "Club")
+        pdf.drawString(720, 482, "Posicion")
 
-        pdf.setFont("Helvetica", 10)
-        y = 692
+        pdf.setFont("Helvetica", 9)
+        y = 462
 
         for jugador in datos["jugadores"]:
-            if y < 60:
+            if y < 50:
                 pdf.showPage()
-                pdf.setFont("Helvetica", 10)
-                y = 780
+                pdf.setFont("Helvetica", 9)
+                y = 550
 
-            pdf.drawString(50, y, str(jugador["id"]))
-            pdf.drawString(95, y, jugador["nombre"])
-            pdf.drawString(250, y, jugador["pais"])
-            pdf.drawString(340, y, jugador["club"])
-            pdf.drawString(470, y, jugador["posicion"])
+            pdf.drawString(40, y, str(jugador["id"]))
+            pdf.drawString(80, y, jugador["nombre"])
+            pdf.drawString(230, y, jugador["telefono"])
+            pdf.drawString(320, y, jugador["correo"])
+            pdf.drawString(490, y, jugador["ciudad"])
+            pdf.drawString(590, y, jugador["club"])
+            pdf.drawString(720, y, jugador["posicion"])
             y = y - 18
 
         pdf.save()

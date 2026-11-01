@@ -15,7 +15,7 @@ def buscar_secuencial(clave):
             revisados = revisados + 1
             jugador = archivos.leer_campos(registro)
 
-            if jugador[0] == clave and jugador[5] == "A":
+            if jugador[0] == clave and jugador[archivos.POS_ESTADO] == "A":
                 encontrado = True
                 break
 

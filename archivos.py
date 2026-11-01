@@ -9,10 +9,12 @@ RUTA_INDICE = "indice.json"
 RUTA_HASH = "jugadores.sha256"
 CARPETA_RESPALDOS = "respaldos"
 
-CAMPOS = ["id", "nombre", "pais", "club", "posicion", "estado"]
-LARGOS = [6, 30, 15, 25, 15, 1]
+CAMPOS = ["id", "nombre", "telefono", "correo", "ciudad", "club", "posicion", "estado"]
+LARGOS = [6, 30, 15, 35, 20, 25, 15, 1]
 
 TAM_REGISTRO = sum(LARGOS) + 1
+CANTIDAD_DATOS = len(CAMPOS) - 1
+POS_ESTADO = len(CAMPOS) - 1
 
 
 def validar_largos(jugador):
@@ -20,6 +22,27 @@ def validar_largos(jugador):
         datos = str(jugador[i]).encode("utf-8")
         if len(datos) > LARGOS[i]:
             return "El campo " + CAMPOS[i] + " permite maximo " + str(LARGOS[i]) + " caracteres."
+    return ""
+
+
+def validar_formato(jugador):
+    telefono = jugador[2]
+    digitos = 0
+    for letra in telefono:
+        if letra.isdigit():
+            digitos = digitos + 1
+        elif letra not in " +-()":
+            return "El telefono solo puede tener numeros, espacios, + - ( )."
+    if digitos < 7:
+        return "El telefono debe tener al menos 7 numeros."
+
+    correo = jugador[3]
+    if " " in correo or correo.count("@") != 1:
+        return "El correo no es valido. Ejemplo: nombre@dominio.com"
+    usuario, dominio = correo.split("@")
+    if usuario == "" or "." not in dominio or dominio.startswith(".") or dominio.endswith("."):
+        return "El correo no es valido. Ejemplo: nombre@dominio.com"
+
     return ""
 
 
@@ -68,6 +91,45 @@ def archivo_completo():
     return os.path.getsize(RUTA_DATOS) % TAM_REGISTRO == 0
 
 
+def archivo_valido():
+    try:
+        with open(RUTA_DATOS, "rb") as archivo:
+            while True:
+                registro = archivo.read(TAM_REGISTRO)
+
+                if len(registro) < TAM_REGISTRO:
+                    break
+
+                jugador = leer_campos(registro)
+
+                if registro[-1:] != b"\n":
+                    return False
+                if not jugador[0].isdecimal():
+                    return False
+                if jugador[POS_ESTADO] != "A" and jugador[POS_ESTADO] != "E":
+                    return False
+    except OSError:
+        return False
+
+    return True
+
+
+def apartar_archivos():
+    fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    try:
+        for ruta in [RUTA_DATOS, RUTA_INDICE, RUTA_HASH]:
+            if os.path.exists(ruta):
+                nombre, extension = os.path.splitext(ruta)
+                os.replace(ruta, nombre + "_anterior_" + fecha + extension)
+    except PermissionError:
+        return "No hay permisos para renombrar los archivos de datos. Cierre otros programas que los usen."
+    except OSError:
+        return "No se pudieron renombrar los archivos de datos."
+
+    return preparar_archivos()
+
+
 def cargar_indice():
     try:
         with open(RUTA_INDICE, "r", encoding="utf-8") as archivo:
@@ -88,7 +150,7 @@ def guardar_indice(indice):
 
 def agregar_jugador(datos):
     jugador = []
-    for i in range(5):
+    for i in range(CANTIDAD_DATOS):
         texto = str(datos[i]).strip()
         if texto == "":
             return "El campo " + CAMPOS[i] + " no puede estar vacio.", -1, -1, -1
@@ -100,6 +162,11 @@ def agregar_jugador(datos):
         return "El id debe ser un numero entero mayor que cero.", -1, -1, -1
 
     jugador[0] = str(int(jugador[0]))
+
+    error = validar_formato(jugador)
+    if error != "":
+        return error, -1, -1, -1
+
     jugador.append("A")
 
     error = validar_largos(jugador)
@@ -179,7 +246,7 @@ def buscar_jugador(id_texto):
         return "El registro del id " + clave + " esta incompleto.", [], -1, -1, -1
 
     jugador = leer_campos(registro)
-    if jugador[0] != clave or jugador[5] != "A":
+    if jugador[0] != clave or jugador[POS_ESTADO] != "A":
         return "El indice no coincide con el archivo de datos.", [], -1, -1, -1
 
     return "", jugador, numero, inicio, fin
@@ -191,13 +258,18 @@ def modificar_jugador(id_texto, nuevos):
         return error, -1, -1
 
     datos = [jugador[0]]
-    for i in range(4):
+    for i in range(CANTIDAD_DATOS - 1):
         texto = str(nuevos[i]).strip()
         if texto == "":
             return "El campo " + CAMPOS[i + 1] + " no puede estar vacio.", -1, -1
         if "\n" in texto or "\r" in texto:
             return "El campo " + CAMPOS[i + 1] + " no puede tener saltos de linea.", -1, -1
         datos.append(texto)
+
+    error = validar_formato(datos)
+    if error != "":
+        return error, -1, -1
+
     datos.append("A")
 
     error = validar_largos(datos)
@@ -228,7 +300,7 @@ def eliminar_jugador(id_texto):
     if indice is None:
         return "No se pudo leer el archivo indice.json."
 
-    jugador[5] = "E"
+    jugador[POS_ESTADO] = "E"
 
     try:
         with open(RUTA_DATOS, "r+b") as archivo:
@@ -255,7 +327,7 @@ def listar_jugadores():
             for numero in range(contar_registros()):
                 registro = archivo.read(TAM_REGISTRO)
                 jugador = leer_campos(registro)
-                if jugador[5] == "A":
+                if jugador[POS_ESTADO] == "A":
                     jugadores.append([numero] + jugador)
     except OSError:
         return None
@@ -349,7 +421,7 @@ def construir_indice():
         for numero in range(contar_registros()):
             registro = archivo.read(TAM_REGISTRO)
             jugador = leer_campos(registro)
-            if jugador[5] == "A" and jugador[0].isdecimal():
+            if jugador[POS_ESTADO] == "A" and jugador[0].isdecimal():
                 indice[jugador[0]] = numero
 
     return indice

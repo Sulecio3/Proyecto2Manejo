@@ -15,7 +15,7 @@ print()
 print("Tamano total del registro:", archivos.TAM_REGISTRO, "bytes")
 print()
 
-jugador = ["1", "Rafael Márquez", "Mexico", "Barcelona", "Defensa", "A"]
+jugador = ["1", "Rafael Márquez", "5551-2048", "rafael.marquez@ejemplo.com", "Zamora", "Barcelona", "Defensa", "A"]
 
 error = archivos.validar_largos(jugador)
 

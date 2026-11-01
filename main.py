@@ -75,7 +75,7 @@ def actualizar_estado():
     mostrados = 0
 
     for jugador in jugadores:
-        texto = jugador[1] + " " + jugador[2] + " " + jugador[3] + " " + jugador[4] + " " + jugador[5]
+        texto = " ".join(jugador[1:8])
 
         if filtro in texto.lower():
             if mostrados % 2 == 0:
@@ -83,7 +83,7 @@ def actualizar_estado():
             else:
                 fila_tag = "impar"
 
-            tabla.insert("", tk.END, values=(jugador[0], jugador[1], jugador[2], jugador[3], jugador[4], jugador[5]), tags=(fila_tag,))
+            tabla.insert("", tk.END, values=tuple(jugador[0:8]), tags=(fila_tag,))
             mostrados = mostrados + 1
 
     lbl_conteo.config(text="Mostrando " + str(mostrados) + " de " + str(len(jugadores)))
@@ -154,7 +154,7 @@ def abrir_agregar():
 
     ventana_agregar = tk.Toplevel(ventana)
     ventana_agregar.title("Agregar jugador")
-    ventana_agregar.geometry("420x400")
+    ventana_agregar.geometry("440x520")
     ventana_agregar.resizable(False, False)
     ventana_agregar.config(bg=verde_oscuro)
 
@@ -164,10 +164,10 @@ def abrir_agregar():
     formulario = tk.Frame(ventana_agregar, bg=verde_oscuro)
     formulario.pack(pady=15)
 
-    etiquetas = ["ID", "Nombre", "Pais", "Club", "Posicion"]
+    etiquetas = ["ID", "Nombre", "Telefono", "Correo", "Ciudad", "Club", "Posicion"]
     cajas_agregar = []
 
-    for i in range(5):
+    for i in range(7):
         etiqueta = tk.Label(formulario, text=etiquetas[i], bg=verde_oscuro, fg=blanco, font=("Arial", 10, "bold"))
         etiqueta.grid(row=i, column=0, padx=10, pady=8, sticky="e")
         caja = tk.Entry(formulario, width=30, font=("Arial", 10), bg=blanco, fg=negro, relief="flat")
@@ -175,10 +175,10 @@ def abrir_agregar():
         cajas_agregar.append(caja)
 
     boton_guardar = tk.Button(formulario, text="Guardar", width=12, bg=amarillo, fg=negro, relief="flat", font=("Arial", 10, "bold"), command=guardar_jugador)
-    boton_guardar.grid(row=5, column=0, pady=15, padx=10)
+    boton_guardar.grid(row=7, column=0, pady=15, padx=10)
 
     boton_cerrar = tk.Button(formulario, text="Cerrar", width=12, bg=verde_cancha, fg=blanco, relief="flat", font=("Arial", 10, "bold"), command=ventana_agregar.destroy)
-    boton_cerrar.grid(row=5, column=1, pady=15)
+    boton_cerrar.grid(row=7, column=1, pady=15)
 
     lbl_resultado = tk.Label(ventana_agregar, text="", bg=verde_oscuro, fg=blanco, font=("Arial", 10), wraplength=360)
     lbl_resultado.pack()
@@ -202,7 +202,7 @@ def cargar_para_modificar():
         lbl_resultado_mod.config(text=error, fg=rojo)
     else:
         id_cargado = jugador[0]
-        for i in range(4):
+        for i in range(6):
             cajas_mod[i].insert(0, jugador[i + 1])
         lbl_resultado_mod.config(text="Jugador cargado. Cambie los datos y guarde.", fg=amarillo)
 
@@ -236,7 +236,7 @@ def abrir_modificar(id_inicial=""):
 
     ventana_modificar = tk.Toplevel(ventana)
     ventana_modificar.title("Modificar jugador")
-    ventana_modificar.geometry("470x430")
+    ventana_modificar.geometry("480x540")
     ventana_modificar.resizable(False, False)
     ventana_modificar.config(bg=verde_oscuro)
 
@@ -255,10 +255,10 @@ def abrir_modificar(id_inicial=""):
     boton_cargar = tk.Button(formulario, text="Cargar datos", bg=verde_cancha, fg=blanco, relief="flat", font=("Arial", 10, "bold"), command=cargar_para_modificar)
     boton_cargar.grid(row=0, column=2, padx=10)
 
-    etiquetas = ["Nombre", "Pais", "Club", "Posicion"]
+    etiquetas = ["Nombre", "Telefono", "Correo", "Ciudad", "Club", "Posicion"]
     cajas_mod = []
 
-    for i in range(4):
+    for i in range(6):
         etiqueta = tk.Label(formulario, text=etiquetas[i], bg=verde_oscuro, fg=blanco, font=("Arial", 10, "bold"))
         etiqueta.grid(row=i + 1, column=0, padx=10, pady=8, sticky="e")
         caja = tk.Entry(formulario, width=30, font=("Arial", 10), bg=blanco, fg=negro, relief="flat")
@@ -266,10 +266,10 @@ def abrir_modificar(id_inicial=""):
         cajas_mod.append(caja)
 
     boton_guardar = tk.Button(formulario, text="Guardar cambios", width=15, bg=amarillo, fg=negro, relief="flat", font=("Arial", 10, "bold"), command=guardar_cambios)
-    boton_guardar.grid(row=5, column=1, pady=15, sticky="w")
+    boton_guardar.grid(row=7, column=1, pady=15, sticky="w")
 
     boton_cerrar = tk.Button(formulario, text="Cerrar", width=10, bg=verde_cancha, fg=blanco, relief="flat", font=("Arial", 10, "bold"), command=ventana_modificar.destroy)
-    boton_cerrar.grid(row=5, column=2, pady=15)
+    boton_cerrar.grid(row=7, column=2, pady=15)
 
     lbl_resultado_mod = tk.Label(ventana_modificar, text="", bg=verde_oscuro, fg=blanco, font=("Arial", 10), wraplength=400)
     lbl_resultado_mod.pack()
@@ -310,9 +310,11 @@ def buscar_por_id():
             "Jugador encontrado",
             "ID: " + jugador[0] + "\n"
             "Nombre: " + jugador[1] + "\n"
-            "Pais: " + jugador[2] + "\n"
-            "Club: " + jugador[3] + "\n"
-            "Posicion: " + jugador[4] + "\n\n"
+            "Telefono: " + jugador[2] + "\n"
+            "Correo: " + jugador[3] + "\n"
+            "Ciudad: " + jugador[4] + "\n"
+            "Club: " + jugador[5] + "\n"
+            "Posicion: " + jugador[6] + "\n\n"
             "Registro numero: " + str(numero) + "\n"
             "Posicion con seek() y tell(): " + str(inicio) + " a " + str(fin)
         )
@@ -460,6 +462,36 @@ def mostrar_informacion():
     messagebox.showinfo("Informacion del archivo", texto)
 
 
+def revisar_formato_inicial():
+    if archivos.archivo_valido():
+        return True
+
+    respuesta = messagebox.askyesno(
+        "Archivo con otra estructura",
+        "El archivo jugadores.dat no tiene el formato actual (registros de " + str(archivos.TAM_REGISTRO) + " bytes).\n"
+        "Probablemente es de una version anterior del programa.\n\n"
+        "Desea guardarlo con otro nombre y empezar con archivos nuevos?\n"
+        "No se borra nada, solo se renombra."
+    )
+
+    if not respuesta:
+        return False
+
+    error = archivos.apartar_archivos()
+
+    if error != "":
+        messagebox.showerror("Error", error)
+        return False
+
+    messagebox.showinfo(
+        "Archivos nuevos",
+        "Los archivos anteriores se renombraron con el sufijo _anterior.\n"
+        "Ahora puede cargar datos nuevos con cargar_prueba.py o desde el menu Jugadores."
+    )
+    actualizar_estado()
+    return True
+
+
 def revisar_indice_inicial():
     if archivos.indice_correcto():
         return
@@ -600,9 +632,9 @@ lbl_filtro.pack(side="right", padx=8)
 contenedor_tabla = tk.Frame(zona, bg=verde_oscuro)
 contenedor_tabla.pack(fill="both", expand=True)
 
-columnas = ("reg", "id", "nombre", "pais", "club", "posicion")
-encabezados = ["Reg", "ID", "Nombre", "Pais", "Club", "Posicion"]
-anchos = [60, 80, 250, 150, 200, 150]
+columnas = ("reg", "id", "nombre", "telefono", "correo", "ciudad", "club", "posicion")
+encabezados = ["Reg", "ID", "Nombre", "Telefono", "Correo", "Ciudad", "Club", "Posicion"]
+anchos = [40, 45, 135, 90, 205, 150, 125, 105]
 
 tabla = ttk.Treeview(contenedor_tabla, columns=columnas, show="headings")
 
@@ -627,12 +659,18 @@ error = archivos.preparar_archivos()
 actualizar_estado()
 ventana.update()
 
+continuar = True
+
 if error != "":
     messagebox.showerror("Error", error)
 else:
-    revisar_indice_inicial()
-    revisar_hash_inicial()
+    continuar = revisar_formato_inicial()
+    if continuar:
+        revisar_indice_inicial()
+        revisar_hash_inicial()
 
-actualizar_estado()
-
-ventana.mainloop()
+if continuar:
+    actualizar_estado()
+    ventana.mainloop()
+else:
+    ventana.destroy()
