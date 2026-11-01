@@ -99,10 +99,8 @@ def agregar_jugador(datos):
     if not jugador[0].isdecimal() or int(jugador[0]) == 0:
         return "El id debe ser un numero entero mayor que cero.", -1, -1, -1
 
-    indice[jugador[0]] = numero
-    guardar_indice(indice)
-    guardar_hash()
-    
+    jugador[0] = str(int(jugador[0]))
+    jugador.append("A")
 
     error = validar_largos(jugador)
     if error != "":
@@ -128,6 +126,7 @@ def agregar_jugador(datos):
 
         indice[jugador[0]] = numero
         guardar_indice(indice)
+        guardar_hash()
 
     except PermissionError:
         return "No hay permisos para escribir en los archivos de datos.", -1, -1, -1
