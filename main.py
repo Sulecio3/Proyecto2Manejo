@@ -1,12 +1,42 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox, simpledialog
+import math
 import archivos
 import exportar
 
+verde_oscuro = "#0d3b20"
+verde_cancha = "#1e7d3c"
+verde_claro = "#27944a"
+blanco = "#f7f7f2"
+amarillo = "#ffd23f"
+negro = "#101c15"
+rojo = "#ff6b5e"
+verde_led = "#6dff8f"
+
 ventana = tk.Tk()
 ventana.title("Registro de Jugadores de Futbol")
-ventana.geometry("480x300")
+ventana.geometry("1000x700")
 ventana.resizable(False, False)
+ventana.config(bg=verde_oscuro)
+
+estilo_tabla = ttk.Style()
+estilo_tabla.theme_use("clam")
+estilo_tabla.configure("Treeview", background=blanco, fieldbackground=blanco, foreground=negro, rowheight=26, font=("Arial", 10))
+estilo_tabla.configure("Treeview.Heading", background=verde_cancha, foreground=blanco, font=("Arial", 10, "bold"))
+estilo_tabla.map("Treeview", background=[("selected", amarillo)], foreground=[("selected", negro)])
+estilo_tabla.configure("Vertical.TScrollbar", background=verde_cancha, troughcolor=negro)
+
+ventana_agregar = None
+cajas_agregar = []
+lbl_resultado = None
+
+ventana_modificar = None
+caja_id_mod = None
+cajas_mod = []
+lbl_resultado_mod = None
+id_cargado = ""
+
 
 def mostrar_estructura():
     texto = "Campos del registro:\n\n"
@@ -25,9 +55,77 @@ def acerca_de():
         "Version 1.0"
     )
 
-ventana_agregar = None
-cajas_agregar = []
-lbl_resultado = None
+
+def actualizar_estado():
+    for fila in tabla.get_children():
+        tabla.delete(fila)
+
+    filtro = caja_filtro.get().strip().lower()
+    jugadores = archivos.listar_jugadores()
+
+    if jugadores is None:
+        val_activos.config(text="--")
+        val_registros.config(text="--")
+        val_tamano.config(text="--")
+        val_integridad.config(text="ERROR", fg=rojo)
+        lbl_conteo.config(text="")
+        lbl_aviso.config(text="No se pudo leer el archivo de datos.")
+        return
+
+    mostrados = 0
+
+    for jugador in jugadores:
+        texto = jugador[1] + " " + jugador[2] + " " + jugador[3] + " " + jugador[4] + " " + jugador[5]
+
+        if filtro in texto.lower():
+            if mostrados % 2 == 0:
+                fila_tag = "par"
+            else:
+                fila_tag = "impar"
+
+            tabla.insert("", tk.END, values=(jugador[0], jugador[1], jugador[2], jugador[3], jugador[4], jugador[5]), tags=(fila_tag,))
+            mostrados = mostrados + 1
+
+    lbl_conteo.config(text="Mostrando " + str(mostrados) + " de " + str(len(jugadores)))
+    val_activos.config(text=str(len(jugadores)))
+
+    try:
+        val_registros.config(text=str(archivos.contar_registros()))
+    except OSError:
+        val_registros.config(text="--")
+
+    error, tamano, modificado, puede_leer, puede_escribir = archivos.informacion_archivo()
+    if error == "":
+        val_tamano.config(text=str(tamano))
+    else:
+        val_tamano.config(text="--")
+
+    estado_hash = archivos.verificar_hash()[0]
+    if estado_hash == "ok":
+        val_integridad.config(text="OK", fg=verde_led)
+    elif estado_hash == "alterado":
+        val_integridad.config(text="ALERTA", fg=rojo)
+    elif estado_hash == "sin_hash":
+        val_integridad.config(text="SIN HASH", fg=amarillo)
+    else:
+        val_integridad.config(text="ERROR", fg=rojo)
+
+    aviso = ""
+    try:
+        if not archivos.archivo_completo():
+            aviso = "Aviso: hay un registro incompleto al final del archivo."
+    except OSError:
+        aviso = "Aviso: no se pudo revisar el archivo de datos."
+    lbl_aviso.config(text=aviso)
+
+
+def al_filtrar(evento):
+    actualizar_estado()
+
+
+def mostrar_todos():
+    caja_filtro.delete(0, tk.END)
+    actualizar_estado()
 
 
 def guardar_jugador():
@@ -38,12 +136,12 @@ def guardar_jugador():
     error, numero, inicio, fin = archivos.agregar_jugador(datos)
 
     if error != "":
-        lbl_resultado.config(text=error, fg="red")
+        lbl_resultado.config(text=error, fg=rojo)
     else:
         lbl_resultado.config(
             text="Jugador guardado en el registro " + str(numero) + ".\n"
             "Posicion con tell(): " + str(inicio) + " a " + str(fin) + " bytes.",
-            fg="green"
+            fg=verde_led
         )
         for caja in cajas_agregar:
             caja.delete(0, tk.END)
@@ -56,59 +154,149 @@ def abrir_agregar():
 
     ventana_agregar = tk.Toplevel(ventana)
     ventana_agregar.title("Agregar jugador")
-    ventana_agregar.geometry("380x330")
+    ventana_agregar.geometry("420x400")
     ventana_agregar.resizable(False, False)
+    ventana_agregar.config(bg=verde_oscuro)
 
-    etiquetas = ["ID:", "Nombre:", "Pais:", "Club:", "Posicion:"]
+    lbl_cabecera = tk.Label(ventana_agregar, text="NUEVO JUGADOR", bg=negro, fg=amarillo, font=("Arial", 14, "bold"), pady=12)
+    lbl_cabecera.pack(fill="x")
+
+    formulario = tk.Frame(ventana_agregar, bg=verde_oscuro)
+    formulario.pack(pady=15)
+
+    etiquetas = ["ID", "Nombre", "Pais", "Club", "Posicion"]
     cajas_agregar = []
 
     for i in range(5):
-        etiqueta = tk.Label(ventana_agregar, text=etiquetas[i])
-        etiqueta.grid(row=i, column=0, padx=15, pady=8, sticky="e")
-        caja = tk.Entry(ventana_agregar, width=30)
-        caja.grid(row=i, column=1, pady=8)
+        etiqueta = tk.Label(formulario, text=etiquetas[i], bg=verde_oscuro, fg=blanco, font=("Arial", 10, "bold"))
+        etiqueta.grid(row=i, column=0, padx=10, pady=8, sticky="e")
+        caja = tk.Entry(formulario, width=30, font=("Arial", 10), bg=blanco, fg=negro, relief="flat")
+        caja.grid(row=i, column=1, pady=8, ipady=3)
         cajas_agregar.append(caja)
 
-    boton_guardar = tk.Button(ventana_agregar, text="Guardar", width=12, command=guardar_jugador)
-    boton_guardar.grid(row=5, column=0, pady=15)
+    boton_guardar = tk.Button(formulario, text="Guardar", width=12, bg=amarillo, fg=negro, relief="flat", font=("Arial", 10, "bold"), command=guardar_jugador)
+    boton_guardar.grid(row=5, column=0, pady=15, padx=10)
 
-    boton_cerrar = tk.Button(ventana_agregar, text="Cerrar", width=12, command=ventana_agregar.destroy)
+    boton_cerrar = tk.Button(formulario, text="Cerrar", width=12, bg=verde_cancha, fg=blanco, relief="flat", font=("Arial", 10, "bold"), command=ventana_agregar.destroy)
     boton_cerrar.grid(row=5, column=1, pady=15)
 
-    lbl_resultado = tk.Label(ventana_agregar, text="", wraplength=340)
-    lbl_resultado.grid(row=6, column=0, columnspan=2, padx=15)
+    lbl_resultado = tk.Label(ventana_agregar, text="", bg=verde_oscuro, fg=blanco, font=("Arial", 10), wraplength=360)
+    lbl_resultado.pack()
 
     cajas_agregar[0].focus()
     ventana_agregar.transient(ventana)
     ventana_agregar.wait_visibility()
-    ventana_agregar.grab_set()    
+    ventana_agregar.grab_set()
 
 
-def actualizar_estado():
-    try:
-        cantidad = archivos.contar_registros()
-        indice = archivos.cargar_indice()
+def cargar_para_modificar():
+    global id_cargado
 
-        texto = "Registros en el archivo: " + str(cantidad)
-        if indice is not None:
-            texto = texto + " (activos: " + str(len(indice)) + ")"
-        lbl_registros.config(text=texto)
+    error, jugador, numero, inicio, fin = archivos.buscar_jugador(caja_id_mod.get())
 
-        if archivos.archivo_completo():
-            lbl_aviso.config(text="")
-        else:
-            lbl_aviso.config(text="Aviso: el archivo tiene un registro incompleto.")
+    for caja in cajas_mod:
+        caja.delete(0, tk.END)
 
-    except OSError:
-        lbl_registros.config(text="Registros en el archivo: no disponible")
-        lbl_aviso.config(text="Aviso: no se pudo leer el archivo de datos.")
+    if error != "":
+        id_cargado = ""
+        lbl_resultado_mod.config(text=error, fg=rojo)
+    else:
+        id_cargado = jugador[0]
+        for i in range(4):
+            cajas_mod[i].insert(0, jugador[i + 1])
+        lbl_resultado_mod.config(text="Jugador cargado. Cambie los datos y guarde.", fg=amarillo)
+
+
+def guardar_cambios():
+    if id_cargado == "":
+        lbl_resultado_mod.config(text="Primero cargue un jugador con el boton Cargar datos.", fg=rojo)
+        return
+
+    nuevos = []
+    for caja in cajas_mod:
+        nuevos.append(caja.get())
+
+    error, inicio, fin = archivos.modificar_jugador(id_cargado, nuevos)
+
+    if error != "":
+        lbl_resultado_mod.config(text=error, fg=rojo)
+    else:
+        lbl_resultado_mod.config(
+            text="Jugador modificado en su lugar.\n"
+            "Posicion con tell(): " + str(inicio) + " a " + str(fin) + " bytes.",
+            fg=verde_led
+        )
+        actualizar_estado()
+
+
+def abrir_modificar(id_inicial=""):
+    global ventana_modificar, caja_id_mod, cajas_mod, lbl_resultado_mod, id_cargado
+
+    id_cargado = ""
+
+    ventana_modificar = tk.Toplevel(ventana)
+    ventana_modificar.title("Modificar jugador")
+    ventana_modificar.geometry("470x430")
+    ventana_modificar.resizable(False, False)
+    ventana_modificar.config(bg=verde_oscuro)
+
+    lbl_cabecera = tk.Label(ventana_modificar, text="MODIFICAR JUGADOR", bg=negro, fg=amarillo, font=("Arial", 14, "bold"), pady=12)
+    lbl_cabecera.pack(fill="x")
+
+    formulario = tk.Frame(ventana_modificar, bg=verde_oscuro)
+    formulario.pack(pady=15)
+
+    etiqueta_id = tk.Label(formulario, text="ID", bg=verde_oscuro, fg=blanco, font=("Arial", 10, "bold"))
+    etiqueta_id.grid(row=0, column=0, padx=10, pady=8, sticky="e")
+
+    caja_id_mod = tk.Entry(formulario, width=12, font=("Arial", 10), bg=blanco, fg=negro, relief="flat")
+    caja_id_mod.grid(row=0, column=1, pady=8, ipady=3, sticky="w")
+
+    boton_cargar = tk.Button(formulario, text="Cargar datos", bg=verde_cancha, fg=blanco, relief="flat", font=("Arial", 10, "bold"), command=cargar_para_modificar)
+    boton_cargar.grid(row=0, column=2, padx=10)
+
+    etiquetas = ["Nombre", "Pais", "Club", "Posicion"]
+    cajas_mod = []
+
+    for i in range(4):
+        etiqueta = tk.Label(formulario, text=etiquetas[i], bg=verde_oscuro, fg=blanco, font=("Arial", 10, "bold"))
+        etiqueta.grid(row=i + 1, column=0, padx=10, pady=8, sticky="e")
+        caja = tk.Entry(formulario, width=30, font=("Arial", 10), bg=blanco, fg=negro, relief="flat")
+        caja.grid(row=i + 1, column=1, columnspan=2, pady=8, ipady=3, sticky="w")
+        cajas_mod.append(caja)
+
+    boton_guardar = tk.Button(formulario, text="Guardar cambios", width=15, bg=amarillo, fg=negro, relief="flat", font=("Arial", 10, "bold"), command=guardar_cambios)
+    boton_guardar.grid(row=5, column=1, pady=15, sticky="w")
+
+    boton_cerrar = tk.Button(formulario, text="Cerrar", width=10, bg=verde_cancha, fg=blanco, relief="flat", font=("Arial", 10, "bold"), command=ventana_modificar.destroy)
+    boton_cerrar.grid(row=5, column=2, pady=15)
+
+    lbl_resultado_mod = tk.Label(ventana_modificar, text="", bg=verde_oscuro, fg=blanco, font=("Arial", 10), wraplength=400)
+    lbl_resultado_mod.pack()
+
+    if id_inicial != "":
+        caja_id_mod.insert(0, id_inicial)
+        cargar_para_modificar()
+    else:
+        caja_id_mod.focus()
+
+    ventana_modificar.transient(ventana)
+    ventana_modificar.wait_visibility()
+    ventana_modificar.grab_set()
+
+
+def editar_seleccion(evento):
+    seleccion = tabla.selection()
+
+    if len(seleccion) == 0:
+        return
+
+    valores = tabla.item(seleccion[0], "values")
+    abrir_modificar(str(valores[1]))
+
 
 def buscar_por_id():
-    texto = simpledialog.askstring(
-        "Buscar por ID",
-        "Ingrese el id del jugador:",
-        parent=ventana
-    )
+    texto = simpledialog.askstring("Buscar por ID", "Ingrese el id del jugador:", parent=ventana)
 
     if texto is None:
         return
@@ -130,108 +318,8 @@ def buscar_por_id():
         )
 
 
-ventana_modificar = None
-caja_id_mod = None
-cajas_mod = []
-lbl_resultado_mod = None
-id_cargado = ""
-
-
-def cargar_para_modificar():
-    global id_cargado
-
-    error, jugador, numero, inicio, fin = archivos.buscar_jugador(caja_id_mod.get())
-
-    for caja in cajas_mod:
-        caja.delete(0, tk.END)
-
-    if error != "":
-        id_cargado = ""
-        lbl_resultado_mod.config(text=error, fg="red")
-    else:
-        id_cargado = jugador[0]
-        for i in range(4):
-            cajas_mod[i].insert(0, jugador[i + 1])
-        lbl_resultado_mod.config(
-            text="Jugador cargado. Cambie los datos y guarde.",
-            fg="black"
-        )
-
-
-def guardar_cambios():
-    if id_cargado == "":
-        lbl_resultado_mod.config(
-            text="Primero cargue un jugador con el boton Cargar datos.",
-            fg="red"
-        )
-        return
-
-    nuevos = []
-    for caja in cajas_mod:
-        nuevos.append(caja.get())
-
-    error, inicio, fin = archivos.modificar_jugador(id_cargado, nuevos)
-
-    if error != "":
-        lbl_resultado_mod.config(text=error, fg="red")
-    else:
-        lbl_resultado_mod.config(
-            text="Jugador modificado en su lugar.\n"
-            "Posicion con tell(): " + str(inicio) + " a " + str(fin) + " bytes.",
-            fg="green"
-        )
-
-
-def abrir_modificar():
-    global ventana_modificar, caja_id_mod, cajas_mod, lbl_resultado_mod, id_cargado
-
-    id_cargado = ""
-
-    ventana_modificar = tk.Toplevel(ventana)
-    ventana_modificar.title("Modificar jugador")
-    ventana_modificar.geometry("420x380")
-    ventana_modificar.resizable(False, False)
-
-    etiqueta_id = tk.Label(ventana_modificar, text="ID:")
-    etiqueta_id.grid(row=0, column=0, padx=15, pady=8, sticky="e")
-
-    caja_id_mod = tk.Entry(ventana_modificar, width=12)
-    caja_id_mod.grid(row=0, column=1, pady=8, sticky="w")
-
-    boton_cargar = tk.Button(ventana_modificar, text="Cargar datos", command=cargar_para_modificar)
-    boton_cargar.grid(row=0, column=2, padx=10)
-
-    etiquetas = ["Nombre:", "Pais:", "Club:", "Posicion:"]
-    cajas_mod = []
-
-    for i in range(4):
-        etiqueta = tk.Label(ventana_modificar, text=etiquetas[i])
-        etiqueta.grid(row=i + 1, column=0, padx=15, pady=8, sticky="e")
-        caja = tk.Entry(ventana_modificar, width=30)
-        caja.grid(row=i + 1, column=1, columnspan=2, pady=8, sticky="w")
-        cajas_mod.append(caja)
-
-    boton_guardar = tk.Button(ventana_modificar, text="Guardar cambios", width=14, command=guardar_cambios)
-    boton_guardar.grid(row=5, column=1, pady=15)
-
-    boton_cerrar = tk.Button(ventana_modificar, text="Cerrar", width=10, command=ventana_modificar.destroy)
-    boton_cerrar.grid(row=5, column=2, pady=15)
-
-    lbl_resultado_mod = tk.Label(ventana_modificar, text="", wraplength=380)
-    lbl_resultado_mod.grid(row=6, column=0, columnspan=3, padx=15)
-
-    caja_id_mod.focus()
-    ventana_modificar.transient(ventana)
-    ventana_modificar.wait_visibility()
-    ventana_modificar.grab_set()
-
-
 def eliminar_por_id():
-    texto = simpledialog.askstring(
-        "Eliminar jugador",
-        "Ingrese el id del jugador:",
-        parent=ventana
-    )
+    texto = simpledialog.askstring("Eliminar jugador", "Ingrese el id del jugador:", parent=ventana)
 
     if texto is None:
         return
@@ -242,10 +330,7 @@ def eliminar_por_id():
         messagebox.showerror("Error", error)
         return
 
-    respuesta = messagebox.askyesno(
-        "Confirmar",
-        "Desea eliminar a " + jugador[1] + " (id " + jugador[0] + ")?"
-    )
+    respuesta = messagebox.askyesno("Confirmar", "Desea eliminar a " + jugador[1] + " (id " + jugador[0] + ")?")
 
     if respuesta:
         error = archivos.eliminar_jugador(jugador[0])
@@ -257,36 +342,22 @@ def eliminar_por_id():
             actualizar_estado()
 
 
-def ver_todos():
-    jugadores = archivos.listar_jugadores()
+def exportar_a_json():
+    error, total = exportar.exportar_json()
 
-    if jugadores is None:
-        messagebox.showerror("Error", "No se pudo leer el archivo de datos.")
-        return
+    if error != "":
+        messagebox.showerror("Error", error)
+    else:
+        messagebox.showinfo("Exportacion", "Se exportaron " + str(total) + " jugadores a:\n" + exportar.RUTA_JSON)
 
-    if len(jugadores) == 0:
-        messagebox.showinfo("Jugadores", "Todavia no hay jugadores registrados.")
-        return
 
-    ventana_lista = tk.Toplevel(ventana)
-    ventana_lista.title("Jugadores registrados")
-    ventana_lista.geometry("800x380")
+def generar_reporte_pdf():
+    error, total = exportar.generar_pdf()
 
-    lista = tk.Listbox(ventana_lista, font=("Courier New", 10), width=95, height=16)
-    desplazamiento = tk.Scrollbar(ventana_lista, command=lista.yview)
-    lista.config(yscrollcommand=desplazamiento.set)
-    desplazamiento.pack(side="right", fill="y")
-    lista.pack(side="left", fill="both", expand=True)
-
-    titulo = f"{'Reg':<4}{'ID':<7}{'Nombre':<28}{'Pais':<15}{'Club':<26}{'Posicion':<15}"
-    lista.insert(tk.END, titulo)
-
-    for jugador in jugadores:
-        linea = (
-            f"{jugador[0]:<4}{jugador[1]:<7}{jugador[2]:<28}"
-            f"{jugador[3]:<15}{jugador[4]:<26}{jugador[5]:<15}"
-        )
-        lista.insert(tk.END, linea)    
+    if error != "":
+        messagebox.showerror("Error", error)
+    else:
+        messagebox.showinfo("Reporte PDF", "Se genero el reporte con " + str(total) + " jugadores en:\n" + exportar.RUTA_PDF)
 
 
 def revisar_hash_inicial():
@@ -313,19 +384,12 @@ def verificar_integridad():
     estado, guardado, actual = archivos.verificar_hash()
 
     if estado == "ok":
-        messagebox.showinfo(
-            "Integridad",
-            "El archivo esta integro.\n\n"
-            "SHA-256 actual:\n" + actual
-        )
+        messagebox.showinfo("Integridad", "El archivo esta integro.\n\nSHA-256 actual:\n" + actual)
 
     elif estado == "sin_hash":
         try:
             archivos.guardar_hash()
-            messagebox.showinfo(
-                "Integridad",
-                "No habia un hash guardado. Se creo con el contenido actual del archivo."
-            )
+            messagebox.showinfo("Integridad", "No habia un hash guardado. Se creo con el contenido actual del archivo.")
         except OSError:
             messagebox.showerror("Error", "No se pudo crear el archivo jugadores.sha256.")
 
@@ -346,31 +410,9 @@ def verificar_integridad():
                 messagebox.showerror("Error", "No se pudo actualizar el hash.")
 
     else:
-        messagebox.showerror("Error", "No se pudo verificar la integridad del archivo.")        
+        messagebox.showerror("Error", "No se pudo verificar la integridad del archivo.")
 
-
-def exportar_a_json():
-    error, total = exportar.exportar_json()
-
-    if error != "":
-        messagebox.showerror("Error", error)
-    else:
-        messagebox.showinfo(
-            "Exportacion",
-            "Se exportaron " + str(total) + " jugadores a:\n" + exportar.RUTA_JSON
-        )
-
-
-def generar_reporte_pdf():
-    error, total = exportar.generar_pdf()
-
-    if error != "":
-        messagebox.showerror("Error", error)
-    else:
-        messagebox.showinfo(
-            "Reporte PDF",
-            "Se genero el reporte con " + str(total) + " jugadores en:\n" + exportar.RUTA_PDF
-        )
+    actualizar_estado()
 
 
 def hacer_respaldo():
@@ -438,20 +480,44 @@ def reconstruir_indice():
     if error != "":
         messagebox.showerror("Error", error)
     else:
-        messagebox.showinfo(
-            "Indice reconstruido",
-            "Se indexaron " + str(total) + " jugadores activos."
-        )
+        messagebox.showinfo("Indice reconstruido", "Se indexaron " + str(total) + " jugadores activos.")
         actualizar_estado()
 
 
+def dibujar_balon(x, y):
+    banner.create_oval(x - 12, y - 12, x + 12, y + 12, fill=blanco, outline=negro)
+
+    puntos = []
+    for i in range(5):
+        angulo = math.radians(-90 + i * 72)
+        puntos.append(x + 5 * math.cos(angulo))
+        puntos.append(y + 5 * math.sin(angulo))
+        banner.create_line(x + 5 * math.cos(angulo), y + 5 * math.sin(angulo), x + 12 * math.cos(angulo), y + 12 * math.sin(angulo), fill=negro)
+
+    banner.create_polygon(puntos, fill=negro)
+
+
+def crear_casilla(titulo):
+    marco = tk.Frame(marcador, bg=negro, padx=16, pady=6, highlightthickness=1, highlightbackground=amarillo)
+    marco.pack(side="left", padx=8, pady=10)
+
+    lbl_titulo_casilla = tk.Label(marco, text=titulo, bg=negro, fg=blanco, font=("Arial", 8, "bold"))
+    lbl_titulo_casilla.pack()
+
+    valor = tk.Label(marco, text="0", bg=negro, fg=amarillo, font=("Consolas", 24, "bold"))
+    valor.pack()
+
+    return valor
+
+
 barra = tk.Menu(ventana)
+
 menu_jugadores = tk.Menu(barra, tearoff=0)
 menu_jugadores.add_command(label="Agregar jugador", command=abrir_agregar)
 menu_jugadores.add_command(label="Buscar por ID", command=buscar_por_id)
 menu_jugadores.add_command(label="Modificar jugador", command=abrir_modificar)
 menu_jugadores.add_command(label="Eliminar jugador", command=eliminar_por_id)
-menu_jugadores.add_command(label="Ver todos", command=ver_todos)
+menu_jugadores.add_command(label="Ver todos", command=mostrar_todos)
 menu_jugadores.add_separator()
 menu_jugadores.add_command(label="Salir", command=ventana.destroy)
 barra.add_cascade(label="Jugadores", menu=menu_jugadores)
@@ -475,29 +541,91 @@ barra.add_cascade(label="Ayuda", menu=menu_ayuda)
 
 ventana.config(menu=barra)
 
-lbl_titulo = tk.Label(
-    ventana,
-    text="REGISTRO DE JUGADORES DE FUTBOL",
-    font=("Arial", 14, "bold")
-)
-lbl_titulo.pack(pady=20)
+banner = tk.Canvas(ventana, width=1000, height=100, highlightthickness=0)
+banner.pack(side="top")
 
-lbl_archivo = tk.Label(ventana, text="Archivo de datos: " + archivos.RUTA_DATOS)
-lbl_archivo.pack()
+for i in range(0, 1000, 50):
+    if (i // 50) % 2 == 0:
+        color = verde_cancha
+    else:
+        color = verde_claro
+    banner.create_rectangle(i, 0, i + 50, 100, fill=color, outline=color)
 
-lbl_tamano = tk.Label(
-    ventana,
-    text="Tamano de cada registro: " + str(archivos.TAM_REGISTRO) + " bytes"
-)
-lbl_tamano.pack(pady=5)
+banner.create_rectangle(10, 10, 990, 90, outline=blanco, width=2)
+banner.create_line(500, 10, 500, 90, fill=blanco, width=2)
+banner.create_oval(463, 13, 537, 87, outline=blanco, width=2)
+banner.create_oval(497, 47, 503, 53, fill=blanco, outline=blanco)
+banner.create_rectangle(10, 22, 110, 78, outline=blanco, width=2)
+banner.create_rectangle(10, 38, 40, 62, outline=blanco, width=2)
+banner.create_rectangle(890, 22, 990, 78, outline=blanco, width=2)
+banner.create_rectangle(960, 38, 990, 62, outline=blanco, width=2)
+dibujar_balon(75, 50)
+dibujar_balon(925, 50)
 
-lbl_registros = tk.Label(ventana, text="")
-lbl_registros.pack()
+marcador = tk.Frame(ventana, bg=verde_oscuro)
+marcador.pack(side="bottom", fill="x")
 
-lbl_aviso = tk.Label(ventana, text="", fg="red")
-lbl_aviso.pack(pady=10)
+val_activos = crear_casilla("ACTIVOS")
+val_registros = crear_casilla("REGISTROS")
+val_bytes = crear_casilla("BYTES POR REG")
+val_tamano = crear_casilla("TAMANO EN BYTES")
+val_integridad = crear_casilla("INTEGRIDAD")
+val_bytes.config(text=str(archivos.TAM_REGISTRO))
+
+lbl_aviso = tk.Label(marcador, text="", bg=verde_oscuro, fg=rojo, font=("Arial", 10, "bold"), wraplength=230, justify="left")
+lbl_aviso.pack(side="left", padx=15)
+
+zona = tk.Frame(ventana, bg=verde_oscuro)
+zona.pack(side="top", fill="both", expand=True, padx=30, pady=12)
+
+encabezado = tk.Frame(zona, bg=verde_oscuro)
+encabezado.pack(fill="x", pady=(0, 10))
+
+titulos = tk.Frame(encabezado, bg=verde_oscuro)
+titulos.pack(side="left")
+
+lbl_titulo = tk.Label(titulos, text="Jugadores registrados", bg=verde_oscuro, fg=amarillo, font=("Arial", 16, "bold"))
+lbl_titulo.pack(anchor="w")
+
+lbl_conteo = tk.Label(titulos, text="", bg=verde_oscuro, fg=blanco, font=("Arial", 9))
+lbl_conteo.pack(anchor="w")
+
+caja_filtro = tk.Entry(encabezado, width=26, font=("Arial", 10), bg=blanco, fg=negro, relief="flat")
+caja_filtro.pack(side="right", ipady=3)
+caja_filtro.bind("<KeyRelease>", al_filtrar)
+
+lbl_filtro = tk.Label(encabezado, text="Filtrar", bg=verde_oscuro, fg=blanco, font=("Arial", 10, "bold"))
+lbl_filtro.pack(side="right", padx=8)
+
+contenedor_tabla = tk.Frame(zona, bg=verde_oscuro)
+contenedor_tabla.pack(fill="both", expand=True)
+
+columnas = ("reg", "id", "nombre", "pais", "club", "posicion")
+encabezados = ["Reg", "ID", "Nombre", "Pais", "Club", "Posicion"]
+anchos = [60, 80, 250, 150, 200, 150]
+
+tabla = ttk.Treeview(contenedor_tabla, columns=columnas, show="headings")
+
+for i in range(len(columnas)):
+    if i < 2:
+        tabla.heading(columnas[i], text=encabezados[i], anchor="center")
+        tabla.column(columnas[i], width=anchos[i], anchor="center")
+    else:
+        tabla.heading(columnas[i], text=encabezados[i], anchor="w")
+        tabla.column(columnas[i], width=anchos[i], anchor="w")
+
+tabla.tag_configure("par", background="#ffffff")
+tabla.tag_configure("impar", background="#e3f1e6")
+tabla.bind("<Double-1>", editar_seleccion)
+
+desplazamiento = ttk.Scrollbar(contenedor_tabla, orient="vertical", command=tabla.yview)
+tabla.config(yscrollcommand=desplazamiento.set)
+desplazamiento.pack(side="right", fill="y")
+tabla.pack(side="left", fill="both", expand=True)
 
 error = archivos.preparar_archivos()
+actualizar_estado()
+ventana.update()
 
 if error != "":
     messagebox.showerror("Error", error)
